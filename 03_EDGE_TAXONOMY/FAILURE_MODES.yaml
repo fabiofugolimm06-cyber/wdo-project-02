@@ -1,0 +1,31 @@
+﻿# FAILURE_MODES.yaml
+failure_modes:
+  - id: FM-EPI-01
+    name: FALSE_BREAKOUT
+    type: EPISODIC
+    mitigation: "confirmação Vela2 física obrigatória"
+
+  - id: FM-EPI-02
+    name: VOLATILITY_SPIKE
+    type: EPISODIC
+    mitigation: "EC-VOL-01 (ATR_REGIME_BLOCK)"
+
+  - id: FM-EXE-01
+    name: LATENCY_DECAY
+    type: EXECUTION
+    mitigation: "cancelamento automático (INV-02)"
+
+  - id: FM-EPI-03
+    name: LIQUIDITY_VOID
+    type: EPISODIC
+    mitigation: "EC-VOL-02 (HIGH_SPREAD_BLOCK)"
+
+  - id: FM-STR-01
+    name: REGIME_SHIFT
+    type: STRUCTURAL
+    mitigation: "discriminador de regime obrigatório"
+
+  - id: FM-MOD-01
+    name: OVERFIT_DECAY
+    type: MODEL
+    mitigation: "walk-forward obrigatório, degradação OOS < 20%"

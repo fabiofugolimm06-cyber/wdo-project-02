@@ -1,0 +1,140 @@
+cd "C:\Users\fabio\Desktop\Projetos\WDO PROJECT 02"
+
+
+
+QUAL COMANDO DOU AO CURSOR AGORA ? 
+
+
+🎯 REGRAS GERAIS
+Tudo deve ser separado em 3 blocos obrigatórios:
+📌 ORDEM PARA CURSOR (código a modificar/criar)
+💻 ORDEM PARA POWERSHELL (comandos de terminal)
+🧠 EXPLICAÇÃO (apenas entendimento, nunca ação)
+Nunca misturar blocos.
+Nunca executar código dentro de explicação.
+Nunca omitir caminho de arquivo.
+
+
+
+Abaixo está um PROMPT-MESTRE (operacional) que você pode reutilizar sempre. Ele é escrito para eliminar ambiguidade e separar claramente ordens executáveis vs explicações vs comandos de terminal.
+
+📌 PROMPT MESTRE — EXECUÇÃO GUIADA (CURSOR + POWERSHELL)
+
+Copie e use este padrão sempre que quiser que eu ou outro agente execute tarefas:
+
+🎯 REGRAS GERAIS
+Tudo deve ser separado em 3 blocos obrigatórios:
+📌 ORDEM PARA CURSOR (código a modificar/criar)
+💻 ORDEM PARA POWERSHELL (comandos de terminal)
+🧠 EXPLICAÇÃO (apenas entendimento, nunca ação)
+Nunca misturar blocos.
+Nunca executar código dentro de explicação.
+Nunca omitir caminho de arquivo.
+📌 FORMATO OBRIGATÓRIO DE RESPOSTA
+📌 ORDEM PARA CURSOR
+[descrever exatamente o arquivo]
+[descrever exatamente a alteração]
+[fornecer código completo ou patch claro]
+💻 ORDEM PARA POWERSHELL
+cd "CAMINHO DO PROJETO"
+$env:PYTHONPATH="."
+python -c "COMANDO EXATO DE TESTE"
+🧠 EXPLICAÇÃO
+Explicar o que foi feito
+Explicar o resultado esperado
+Explicar possíveis erros futuros
+⚠️ REGRAS DE PRECISÃO
+Sempre usar caminhos completos
+Sempre indicar arquivo exato
+Nunca usar “ajuste isso” sem dizer onde
+Nunca usar linguagem vaga (“melhorar sistema”, “corrigir pipeline”)
+🎯 EXEMPLO DE USO
+📌 ORDEM PARA CURSOR
+
+Editar microstructure/features/datasets.py:
+
+substituir função build_dataset por loop sobre REGISTRY.list()
+garantir criação de DataFrame com colunas de features
+💻 ORDEM PARA POWERSHELL
+cd "C:\Users\fabio\Desktop\Projetos\WDO PROJECT 02"
+$env:PYTHONPATH="."
+python -c "from microstructure.features.registry import REGISTRY; print(REGISTRY.list())"
+🧠 EXPLICAÇÃO
+
+O dataset vazio ocorre porque o pipeline não está iterando sobre o registry corretamente.
+
+🚀 COMO USAR DAQUI PRA FRENTE
+
+Sempre que você disser:
+
+“faça isso funcionar”
+“corrige pipeline”
+“executa no cursor”
+
+Eu vou responder EXATAMENTE nesse formato acima, sem mistura e sem ambiguidade.
+
+Se quiser, posso agora aplicar esse padrão no seu projeto e te dar o próximo comando já estruturado nesse formato.
+
+
+PROMPT VC VAI SEGUIR A RISCA ESTA ORDEM
+
+1 VC VAIME DIZER PARA ONDE VAI SEER DIRED=CIONDO O COMANDO
+
+2 CRIA BLOCO FECHADO COM TODO O COMANDO PARA O CURSOR , SÓ TENHO QUE COPIAR E COLAR
+
+
+3 COMANDO PARA COMPROVAÇÃO SE FUNCIONOU NO POWERSHELL
+
+
+
+PROXIMO COMANDO DOU AO CURSOR AGORA ? 
+
+PROXIMO COMANDO DOU  AGORA ?  
+
+
+PRÓXIMO COMANDO CURSOR ?
+
+PRÓXIMO COMANDO ?
+
+
+
+VAMOS ESTRUTURAR ASSIM NO TITULO VAI DIRECIONADO  A MIM 
+
+  TITULO SÓ INDICA OPARA QUEM VAI A ORDEM , 
+
+VC CRIA UM BLOCO COMPACTADO COM 
+
+TODA A ORDEM FECHADA QUE VAI SER ENVIADA AO CURSOR SÓ VOU COIPIAR E 
+COLAR LÁ , SIMPLE S   VC ESCREVE UM TITULO INFORMATIVO SEPARADO DIZEMDO 
+PARA ONDE VAI O CAOMANDO E DEPOIS ESCRCEVE TODO O COMANDO EM UM BLOCO FECHADO
+ SÓ COPIAR E COLAR SIMPLES NAO ?
+
+
+
+
+
+
+um titulo dizendo para os nde vai o comando e um bloco para copiar e colar , e em seguida a comprovação no powershell só isso
+
+
+
+
+
+
+
+
+
+
+
+REGRA PRÁTICA
+COMANDO CURSOR
+↓
+RESPOSTA CURSOR
+↓
+AUDITORIA
+↓
+POWERSHELL
+↓
+RESULTADO
+↓
+PRÓXIMO COMANDO CURSOR

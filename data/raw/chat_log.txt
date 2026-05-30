@@ -1,0 +1,37 @@
+
+[2026-05-26 16:16:53]
+python save_chat_log.py
+--------------------------------------------------------------------------------
+
+[2026-05-26 16:16:57]
+Requirement already satisfied: pyperclip in C:\Users\fabio\AppData\Local\Programs\Python\Python314\Lib\site-packages (1.11.0)
+
+[notice] A new release of pip is available: 26.0.1 -> 26.1.1
+[notice] To update, run: python.exe -m pip install --upgrade pip
+
+C:\Users\fabio\Desktop\Projetos\WDO PROJECT 02\data\raw>python save_chat_log.py
+Monitorando clipboard... Pressione Ctrl+C para parar.
+Salvo em chat_log.txt
+
+--------------------------------------------------------------------------------
+
+[2026-05-26 16:17:48]
+Ok! Criou o arquivo de TXT. Agora vamos continuar com o projeto.
+--------------------------------------------------------------------------------
+
+[2026-05-26 16:17:49]
+Requirement already satisfied: pyperclip in C:\Users\fabio\AppData\Local\Programs\Python\Python314\Lib\site-packages (1.11.0)
+
+[notice] A new release of pip is available: 26.0.1 -> 26.1.1
+[notice] To update, run: python.exe -m pip install --upgrade pip
+
+C:\Users\fabio\Desktop\Projetos\WDO PROJECT 02\data\raw>python save_chat_log.py
+Monitorando clipboard... Pressione Ctrl+C para parar.
+Salvo em chat_log.txt
+
+--------------------------------------------------------------------------------
+
+[2026-05-26 16:18:05]
+cd C:\Users\fabio\Desktop\Projetos\WDO PROJECT 02\data\raw
+python -m 07_VALIDATION.run_validation
+--------------------------------------------------------------------------------

@@ -1,0 +1,12 @@
+# WDO PROJECT 02 — dependências para CI e desenvolvimento
+# Base: requirements_wdo.txt + ML + testes
+
+numpy>=1.26.4,<3
+pandas>=2.2.2,<3
+scipy>=1.11.4,<2
+scikit-learn>=1.4.0,<2
+pytest>=8.0,<11
+python-dateutil>=2.9.0
+pytz>=2024.1
+packaging>=24.0
+tzdata>=2024.1

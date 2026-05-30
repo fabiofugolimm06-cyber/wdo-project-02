@@ -1,0 +1,37 @@
+﻿edge_id: ET-03.reversionTrap.v1.0
+edge_type: reversionTrap
+version: 1.0
+status: HYPOTHESIS
+
+mechanism:
+  description: "Desvio extremo do preço em relação a valor justo (VWAP + 2x ATR) seguido por retorno à média"
+  market_logic: "Exaustão direcional, atração para valor justo. Participantes contrários entram quando preço se afasta muito."
+
+regime_validity: [NORMAL_VOL, ROTATION_DAY]
+
+trigger:
+  id: TRG-03
+  observable: "Preço > VWAP + 2x ATR ou < VWAP - 2x ATR"
+  measurement: "abs(close - VWAP) > 2 * ATR_atual"
+
+confirmation:
+  ids: [CNF-03]
+  logic: AND
+
+invalidation:
+  conditions: [INV-02, INV-04]
+
+parameters:
+  fixed:
+    - name: DEVIATION_MULTIPLIER
+      value: 2.0
+      source: "provisional (Carver)"
+    - name: ATR_LOOKBACK
+      value: 20
+      source: "provisional (padrão sistema)"
+  adaptive: []
+
+failure_modes_primary: [FM-EPI-02, FM-STR-01]
+walkforward_required: true
+oos_degradation_max: 0.20
+retail_implementable: true

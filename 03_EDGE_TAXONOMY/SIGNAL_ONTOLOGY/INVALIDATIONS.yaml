@@ -1,0 +1,17 @@
+﻿# SIGNAL_ONTOLOGY/INVALIDATIONS.yaml
+invalidations:
+  - id: INV-01
+    name: FALSE_MOMENTUM
+    condition: "close_vela2 > close_vela1 and close_vela2 <= high_vela1 + 0.5"
+
+  - id: INV-02
+    name: SIGNAL_EXPIRED
+    condition: "mais de 1 vela desde trigger sem confirmação"
+
+  - id: INV-03
+    name: REGIME_COLLAPSE
+    condition: "ATR cruza 1.5x média durante monitoramento"
+
+  - id: INV-04
+    name: DIRECTION_REVERSAL
+    condition: "preço reverte para lado oposto antes da confirmação"

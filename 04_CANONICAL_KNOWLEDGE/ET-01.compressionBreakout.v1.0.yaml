@@ -1,0 +1,43 @@
+﻿edge_id: ET-01.compressionBreakout.v1.0
+edge_type: compressionBreakout
+version: 1.0
+status: HYPOTHESIS
+
+mechanism:
+  description: "Compressão de range (baixa volatilidade) seguida de expansão direcional com volume confirmatório"
+  market_logic: "Acumulação de desequilíbrio latente durante range estreito. Quando o preço rompe o nível de compressão, ordens represadas alimentam movimento direcional brusco."
+
+regime_validity: [LOW_VOL, NORMAL_VOL]
+
+trigger:
+  id: TRG-01
+  observable: "Vela1 fecha com direção clara e ATR baixo"
+  measurement: "ATR_atual < 0.70 * ATR_medio_20 AND close_vela1 != open_vela1"
+
+confirmation:
+  ids: [CNF-01, CNF-02]
+  logic: AND
+
+invalidation:
+  conditions: [INV-01, INV-02, INV-03]
+
+parameters:
+  fixed:
+    - name: ATR_LOOKBACK
+      value: 20
+      source: "provisional (Crabel cap.4)"
+    - name: COMPRESSION_THRESHOLD
+      value: 0.70
+      source: "provisional (Northington)"
+    - name: MIN_BREAKOUT_POINTS
+      value: 0.5
+      source: "provisional (EC-SIZE-03 slippage nominal)"
+    - name: VOLUME_SURGE_MULT
+      value: 1.0
+      source: "provisional (Clenow)"
+  adaptive: []
+
+failure_modes_primary: [FM-EPI-01, FM-EXE-01]
+walkforward_required: true
+oos_degradation_max: 0.20
+retail_implementable: true

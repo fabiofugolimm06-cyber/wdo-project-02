@@ -1,0 +1,29 @@
+﻿# SIGNAL_ONTOLOGY/TRIGGERS.yaml
+triggers:
+  - id: TRG-01
+    name: COMPRESSION_BREAKOUT_CANDIDATE
+    associated_edges: [ET-01]
+    observable: "Vela1 fecha com direção clara e ATR baixo"
+    measurement: "ATR_atual < 0.70 * ATR_medio_20 and close_vela1 != open_vela1"
+
+  - id: TRG-02
+    name: MOMENTUM_VELA1
+    associated_edges: [ET-02]
+    observable: "Vela1 tem direção definida"
+    measurement: "close_vela1 != open_vela1"
+
+  - id: TRG-03
+    name: EXTREME_DEVIATION
+    associated_edges: [ET-03]
+    observable: "Preço > VWAP + 2x ATR ou < VWAP - 2x ATR"
+
+  - id: TRG-04
+    name: AUCTION_IMBALANCE_SIGNAL
+    associated_edges: [ET-04]
+    observable: "Volume direcional assimétrico nos primeiros 30 min"
+    measurement: "(volume_up - volume_down) / total > 0.6"
+
+  - id: TRG-05
+    name: EXTREME_TEST
+    associated_edges: [ET-05]
+    observable: "Preço toca suporte/resistência pela 2ª vez em 5 velas"

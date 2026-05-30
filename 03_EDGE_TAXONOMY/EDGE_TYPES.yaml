@@ -1,0 +1,62 @@
+﻿# EDGE_TYPES.yaml
+# 5 tipos de edge ortogonais, implementáveis no varejo
+version: 1.0
+
+edge_types:
+  - id: ET-01
+    name: compressionBreakout
+    description: >
+      Compressão de range (baixa volatilidade) seguida de expansão direcional
+      com volume confirmatório.
+    causal_mechanism: acumulação de desequilíbrio latente durante range estreito
+    observables: [ATR, price_breakout, volume]
+    regime_validity: [LOW_VOL, NORMAL_VOL]
+    opposite_type: none
+    retail_implementable: true
+
+  - id: ET-02
+    name: momentumPersistence
+    description: >
+      Movimento direcional confirmado por duas velas consecutivas na mesma direção,
+      com rompimento físico mínimo e volume.
+    causal_mechanism: inércia posicional de participantes alinhados
+    observables: [price_sequence, volume, breakout_physical]
+    regime_validity: [NORMAL_VOL, TREND_DAY]
+    opposite_type: ET-03
+    retail_implementable: true
+
+  - id: ET-03
+    name: reversionTrap
+    description: >
+      Desvio extremo do preço em relação a valor justo (VWAP + 2x ATR) seguido
+      por retorno à média.
+    causal_mechanism: exaustão direcional, atração para valor justo
+    observables: [price_deviation, VWAP, ATR]
+    regime_validity: [NORMAL_VOL, ROTATION_DAY]
+    opposite_type: ET-02
+    retail_implementable: true
+
+  - id: ET-04
+    name: auctionImbalance
+    description: >
+      Desequilíbrio direcional de volume (compra vs venda) em janela de tempo,
+      sugerindo domínio de um lado do leilão.
+    causal_mechanism: assimetria de fluxo de ordens
+    observables: [volume_up, volume_down, time_window]
+    regime_validity: [NORMAL_VOL, TREND_DAY, OPENING_PHASE]
+    opposite_type: ET-05
+    retail_implementable: PARTIAL
+
+  - id: ET-05
+    name: auctionFailure
+    description: >
+      Teste de extremo (suporte/resistência) sem aceitação, resultando em
+      reversão.
+    causal_mechanism: falta de convicção no rompimento
+    observables: [price_touch, rejection_candle, close_inside_range]
+    regime_validity: [NORMAL_VOL, ROTATION_DAY]
+    opposite_type: ET-04
+    retail_implementable: true
+
+incompatible_pairs:
+  - [ET-02, ET-03]

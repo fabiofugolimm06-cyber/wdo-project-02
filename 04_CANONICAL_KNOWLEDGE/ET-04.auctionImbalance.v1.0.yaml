@@ -1,0 +1,37 @@
+﻿edge_id: ET-04.auctionImbalance.v1.0
+edge_type: auctionImbalance
+version: 1.0
+status: HYPOTHESIS
+
+mechanism:
+  description: "Desequilíbrio direcional de volume (compra vs venda) em janela de tempo, sugerindo domínio de um lado do leilão"
+  market_logic: "Assimetria de fluxo de ordens. Quando um lado domina consistentemente, o preço se move para descobrir novo valor."
+
+regime_validity: [NORMAL_VOL, TREND_DAY, OPENING_PHASE]
+
+trigger:
+  id: TRG-04
+  observable: "Volume direcional assimétrico nos primeiros 30 min"
+  measurement: "(volume_up - volume_down) / total_volume > 0.6"
+
+confirmation:
+  ids: [CNF-02]
+  logic: AND
+
+invalidation:
+  conditions: [INV-02, INV-04]
+
+parameters:
+  fixed:
+    - name: IMBALANCE_THRESHOLD
+      value: 0.6
+      source: "provisional (Dalton adaptado)"
+    - name: TIME_WINDOW_MINUTES
+      value: 30
+      source: "provisional (OPENING_PHASE)"
+  adaptive: []
+
+failure_modes_primary: [FM-EPI-03, FM-STR-01]
+walkforward_required: true
+oos_degradation_max: 0.20
+retail_implementable: PARTIAL

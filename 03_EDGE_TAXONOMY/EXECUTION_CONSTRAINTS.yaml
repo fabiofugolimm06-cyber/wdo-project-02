@@ -1,0 +1,50 @@
+﻿# EXECUTION_CONSTRAINTS.yaml
+version: 1.0
+
+constraints:
+  - id: EC-VOL-01
+    name: ATR_REGIME_BLOCK
+    condition: "ATR_atual > ATR_medio_20 * 1.5"
+    priority: ABSOLUTE
+    action: SENTINEL_MODE
+
+  - id: EC-VOL-02
+    name: HIGH_SPREAD_BLOCK
+    condition: "spread_estimado > 0.5 ponto"
+    proxy: "(ATR > 1.2x média) or (volume < 0.4x média)"
+    priority: HIGH
+    action: BLOCK
+
+  - id: EC-TIME-01
+    name: SESSION_TRANSITION_BLOCK
+    condition: "horario < 10:05"
+    priority: HIGH
+    action: BLOCK
+
+  - id: EC-TIME-02
+    name: GOLDEN_WINDOW_BLOCK
+    condition: "horario < 10:00 or horario > 12:30"
+    priority: ABSOLUTE
+    action: SENTINEL_MODE
+
+  - id: EC-TIME-03
+    name: PRE_CLOSE_BLOCK
+    condition: "horario > 12:15"
+    priority: HIGH
+    action: BLOCK_NEW_ENTRIES
+
+  - id: EC-SIZE-01
+    name: POSITION_SIZING_FLOOR
+    formula: "math.floor((capital * 0.01) / ((ATR + 0.5) * 10))"
+    priority: ABSOLUTE
+
+  - id: EC-SIZE-02
+    name: MINIMUM_CAPITAL_THRESHOLD
+    condition: "n_contratos < 1"
+    priority: ABSOLUTE
+    action: BLOCK
+
+  - id: EC-SIG-01
+    name: STOP_DYNAMIC_MANDATORY
+    formula: "stop_pts = ATR_atual + 0.5"
+    priority: ABSOLUTE

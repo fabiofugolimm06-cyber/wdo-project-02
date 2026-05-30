@@ -1,0 +1,16 @@
+﻿# SIGNAL_ONTOLOGY/CONFIRMATIONS.yaml
+confirmations:
+  - id: CNF-01
+    name: VELA2_PHYSICAL_BREAKOUT
+    associated_triggers: [TRG-01, TRG-02]
+    measurement: "close_vela2 > high_vela1 + 0.5 or close_vela2 < low_vela1 - 0.5"
+
+  - id: CNF-02
+    name: VOLUME_SURGE
+    associated_triggers: [TRG-01, TRG-02, TRG-04]
+    measurement: "volume_vela2 > media_volume_20"
+
+  - id: CNF-03
+    name: REJECTION_CONFIRMATION
+    associated_triggers: [TRG-03, TRG-05]
+    measurement: "close < range_high - 0.5*ATR or close > range_low + 0.5*ATR"

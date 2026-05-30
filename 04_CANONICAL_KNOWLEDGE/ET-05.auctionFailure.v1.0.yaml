@@ -1,0 +1,37 @@
+﻿edge_id: ET-05.auctionFailure.v1.0
+edge_type: auctionFailure
+version: 1.0
+status: HYPOTHESIS
+
+mechanism:
+  description: "Teste de extremo (suporte/resistência) sem aceitação, resultando em reversão"
+  market_logic: "Falta de convicção no rompimento. O preço toca o nível mas fecha dentro do range, indicando rejeição."
+
+regime_validity: [NORMAL_VOL, ROTATION_DAY]
+
+trigger:
+  id: TRG-05
+  observable: "Preço toca suporte/resistência pela 2ª vez em 5 velas"
+  measurement: "price touches same support/resistance level at least twice in last 5 candles"
+
+confirmation:
+  ids: [CNF-03]
+  logic: AND
+
+invalidation:
+  conditions: [INV-02, INV-04]
+
+parameters:
+  fixed:
+    - name: LOOKBACK_CANDLES
+      value: 5
+      source: "provisional (Dalton)"
+    - name: MIN_TOUCHES
+      value: 2
+      source: "provisional (Dalton)"
+  adaptive: []
+
+failure_modes_primary: [FM-EPI-01, FM-STR-01]
+walkforward_required: true
+oos_degradation_max: 0.20
+retail_implementable: true

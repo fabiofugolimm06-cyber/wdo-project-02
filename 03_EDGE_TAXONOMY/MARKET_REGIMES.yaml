@@ -1,0 +1,30 @@
+﻿# MARKET_REGIMES.yaml
+version: 1.0
+
+volatility_regimes:
+  - id: LOW_VOL
+    detection: "ATR_atual < ATR_medio_20 * 0.70"
+    posture: ALERT_MODE
+  - id: NORMAL_VOL
+    detection: "ATR_medio_20 * 0.70 <= ATR_atual <= ATR_medio_20 * 1.50"
+    posture: OPERATIONAL
+  - id: PANIC_PHASE
+    detection: "ATR_atual > ATR_medio_20 * 1.50"
+    posture: SENTINEL_MODE
+
+directional_regimes:
+  - id: TREND_DAY
+    detection: "3 primeiras velas mesma direção + volume > média, e após 5 velas sem reversão >= 2x ATR"
+  - id: ROTATION_DAY
+    detection: "3 sinais de momentum com reversão imediata, ou range consolidado >=5 velas"
+
+temporal_phases:
+  - id: OPENING_PHASE
+    range: ["10:00", "10:30"]
+  - id: CORE_PHASE
+    range: ["10:30", "11:30"]
+  - id: DECAY_PHASE
+    range: ["11:30", "12:15"]
+  - id: CLOSE_PHASE
+    range: ["12:15", "12:30"]
+    posture: BLOCK_NEW_ENTRIES
