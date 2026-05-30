@@ -1,50 +1,53 @@
 """
-CI — stress de determinismo do pipeline ML crítico (≥10 execuções).
+CI — stress de determinismo do pipeline ML crítico (20 execuções).
 """
 
 from __future__ import annotations
 
-import numpy as np
 import pytest
 
 from microstructure.determinism import WDO_PROJECT_RANDOM_SEED, set_global_determinism
+from microstructure.model.pipeline import pipeline_fingerprint, run_ml_pipeline_v1
 from tests.ohlcv_data import make_ohlcv
 
-# Importa helper do módulo de testes do model (mesmo contrato do pipeline integrado)
-from tests.test_model_v1 import _run_ml_pipeline
-
+# 10 loop + 10 parametrized = 20 runs no CI
 _STRESS_ITERATIONS = 10
+_TOTAL_CI_RUNS = 20
 
 
 @pytest.mark.ci_determinism
 class TestCIDeterminismStress:
-    def test_ml_pipeline_stable_10_iterations(self):
-        """Detecta regressões de contagem (ex.: 176 vs 195) e métricas flutuantes."""
-        df = make_ohlcv(200, seed=WDO_PROJECT_RANDOM_SEED)
+    def test_ml_pipeline_stable_20_equivalent_runs(self):
+        """
+        10 execuções isoladas com DataFrame novo a cada iteração.
+
+        Compara fingerprint (shape, métricas arredondadas, sinais, proba bytes).
+        """
         expected_rows = 200 - 5
-        results = []
+        base_fp = None
 
         for i in range(_STRESS_ITERATIONS):
             set_global_determinism(WDO_PROJECT_RANDOM_SEED)
-            out = _run_ml_pipeline(df)
+            out = run_ml_pipeline_v1(
+                make_ohlcv(200, seed=WDO_PROJECT_RANDOM_SEED),
+                seed=WDO_PROJECT_RANDOM_SEED,
+            )
             assert out["n_ml"] == expected_rows, (
-                f"iteração {i + 1}/{_STRESS_ITERATIONS}: n_ml={out['n_ml']}, "
-                f"esperado {expected_rows}"
+                f"loop {i + 1}/{_STRESS_ITERATIONS}: n_ml={out['n_ml']}"
             )
-            results.append(out)
-
-        base = results[0]
-        for i, out in enumerate(results[1:], start=2):
-            assert out["n_ml"] == base["n_ml"], f"iteração {i}: shape divergente"
-            assert out["metrics"] == base["metrics"], f"iteração {i}: métricas divergentes"
-            assert np.array_equal(out["signals"], base["signals"]), (
-                f"iteração {i}: sinais divergentes"
-            )
+            fp = pipeline_fingerprint(out)
+            if base_fp is None:
+                base_fp = fp
+            else:
+                assert fp == base_fp, f"loop {i + 1}: fingerprint divergiu"
 
     @pytest.mark.parametrize("run_idx", range(_STRESS_ITERATIONS))
     def test_full_pipeline_parametrized(self, run_idx: int):
-        """Espelha TestModelPipelineIntegration::test_full_pipeline por iteração."""
+        """Mais 10 runs — reinício de seed por teste (conftest autouse)."""
         set_global_determinism(WDO_PROJECT_RANDOM_SEED)
-        out = _run_ml_pipeline(make_ohlcv(200, seed=WDO_PROJECT_RANDOM_SEED))
+        out = run_ml_pipeline_v1(
+            make_ohlcv(200, seed=WDO_PROJECT_RANDOM_SEED),
+            seed=WDO_PROJECT_RANDOM_SEED,
+        )
         assert out["n_ml"] == 195
         assert out["n_train"] + out["n_test"] == out["n_ml"]

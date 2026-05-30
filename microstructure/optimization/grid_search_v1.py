@@ -65,7 +65,12 @@ def _train_logistic_with_params(
 
     set_global_determinism(WDO_PROJECT_RANDOM_SEED)
     X_fit, y_fit = drop_nan_feature_rows(X_train.copy(), y_train.copy())
-    lr_kwargs = {**model_params, "random_state": WDO_PROJECT_RANDOM_SEED}
+    lr_kwargs = {
+        **model_params,
+        "random_state": WDO_PROJECT_RANDOM_SEED,
+        "solver": "lbfgs",
+        "warm_start": False,
+    }
     if "max_iter" not in lr_kwargs:
         lr_kwargs["max_iter"] = 1000
 

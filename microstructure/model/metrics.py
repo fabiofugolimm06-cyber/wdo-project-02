@@ -26,7 +26,7 @@ def evaluate_classifier(
         raise ValueError("evaluate_classifier: X_test vazio.")
 
     y_true = np.asarray(y_test.copy(), dtype=int)
-    y_pred = model.predict(X_test.copy())
+    y_pred = model.predict(X_test.copy().to_numpy(dtype=np.float64, copy=True))
 
     return {
         "accuracy": float(accuracy_score(y_true, y_pred)),

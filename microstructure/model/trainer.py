@@ -54,6 +54,13 @@ def train_logistic_model(
         y_train.copy(),
     )
 
-    model = LogisticRegression(max_iter=1000, random_state=WDO_PROJECT_RANDOM_SEED)
-    model.fit(X_fit, np.asarray(y_fit, dtype=int))
+    # solver=lbfgs: determinístico; evita liblinear/saga com variância entre runs/CI
+    model = LogisticRegression(
+        solver="lbfgs",
+        max_iter=1000,
+        tol=1e-6,
+        random_state=WDO_PROJECT_RANDOM_SEED,
+        warm_start=False,
+    )
+    model.fit(X_fit.to_numpy(dtype=np.float64, copy=True), np.asarray(y_fit, dtype=int))
     return model

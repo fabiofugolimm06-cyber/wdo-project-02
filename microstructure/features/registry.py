@@ -87,9 +87,12 @@ def autodiscover() -> list[str]:
 
     errors: list[str] = []
 
-    for _, module_name, _ in pkgutil.iter_modules(pkg_path):
-        if module_name in _SKIP_MODULES:
-            continue
+    discovered = sorted(
+        module_name
+        for _, module_name, _ in pkgutil.iter_modules(pkg_path)
+        if module_name not in _SKIP_MODULES
+    )
+    for module_name in discovered:
         full_name = f"{pkg_name}.{module_name}"
         try:
             importlib.import_module(full_name)

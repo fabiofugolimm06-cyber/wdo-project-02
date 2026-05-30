@@ -21,7 +21,7 @@ def predict_probabilities(
     if len(X_test) == 0:
         raise ValueError("predict_probabilities: X_test vazio.")
 
-    return model.predict_proba(X_test.copy())
+    return model.predict_proba(X_test.copy().to_numpy(dtype=np.float64, copy=True))
 
 
 def generate_ml_signal(

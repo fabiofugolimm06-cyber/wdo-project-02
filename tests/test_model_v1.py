@@ -10,7 +10,7 @@ import pytest
 
 from microstructure.features.datasets import build_dataset
 from microstructure.labeling import create_horizon_labels, drop_invalid_label_rows
-from microstructure.determinism import WDO_PROJECT_RANDOM_SEED
+from microstructure.determinism import WDO_PROJECT_RANDOM_SEED, set_global_determinism
 from microstructure.model import (
     drop_nan_feature_rows,
     evaluate_classifier,
@@ -19,6 +19,7 @@ from microstructure.model import (
     train_logistic_model,
     train_test_split_time_series,
 )
+from microstructure.model.pipeline import pipeline_fingerprint, run_ml_pipeline_v1
 from tests.ohlcv_data import make_ohlcv
 
 
@@ -96,26 +97,18 @@ class TestPredictAndMetrics:
             assert 0.0 <= v <= 1.0
 
 
-def _run_ml_pipeline(df: pd.DataFrame, horizon: int = 5, train_size: float = 0.70):
-    """Pipeline ML v1 completo (cópias defensivas em cada etapa do model)."""
-    X = build_dataset(df)
-    y = create_horizon_labels(df, price_col="fechamento", horizon=horizon)
-    X_ml, y_ml = drop_invalid_label_rows(X, y)
-    X_ml, y_ml = drop_nan_feature_rows(X_ml, y_ml)
-    X_train, X_test, y_train, y_test = train_test_split_time_series(
-        X_ml, y_ml, train_size=train_size
+def _run_ml_pipeline(
+    df: pd.DataFrame,
+    horizon: int = 5,
+    train_size: float = 0.70,
+) -> dict:
+    """Delega ao pipeline isolado (determinístico)."""
+    return run_ml_pipeline_v1(
+        df,
+        horizon=horizon,
+        train_size=train_size,
+        seed=WDO_PROJECT_RANDOM_SEED,
     )
-    model = train_logistic_model(X_train, y_train)
-    proba = predict_probabilities(model, X_test)
-    signals = generate_ml_signal(proba, threshold=0.55)
-    metrics = evaluate_classifier(model, X_test, y_test)
-    return {
-        "n_ml": len(X_ml),
-        "n_train": len(X_train),
-        "n_test": len(X_test),
-        "metrics": metrics,
-        "signals": signals,
-    }
 
 
 class TestDeterminism:
@@ -129,9 +122,8 @@ class TestDeterminism:
         df = _ohlcv(200, seed=WDO_PROJECT_RANDOM_SEED)
         a = _run_ml_pipeline(df)
         b = _run_ml_pipeline(df)
+        assert pipeline_fingerprint(a) == pipeline_fingerprint(b)
         assert a["n_ml"] == b["n_ml"] == 195
-        assert a["metrics"] == b["metrics"]
-        assert np.array_equal(a["signals"], b["signals"])
 
     def test_build_dataset_does_not_mutate_input_df(self):
         df = _ohlcv(80)
@@ -142,6 +134,7 @@ class TestDeterminism:
 
 class TestModelPipelineIntegration:
     def test_full_pipeline(self, capsys):
+        set_global_determinism(WDO_PROJECT_RANDOM_SEED)
         df = _ohlcv(200)
         X = build_dataset(df)
         y = create_horizon_labels(df, price_col="fechamento", horizon=5)

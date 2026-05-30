@@ -110,7 +110,9 @@ PARA ONDE VAI O CAOMANDO E DEPOIS ESCRCEVE TODO O COMANDO EM UM BLOCO FECHADO
  SÓ COPIAR E COLAR SIMPLES NAO ?
 
 
-
+tem hora em vez de cicar batento cabeça pede o que fazer ao cursor, nao é ele que vai fazer , mas é ele que
+ vai explicar compo fazer , felhor que ficar em loopinp eterno numa coisa grava isso . por falar em garava
+  vc esta com a memoria cheia agora? preciso deletar algo para ter espaço ? como ?
 
 
 
