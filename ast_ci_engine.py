@@ -1,7 +1,8 @@
 """
-ast_ci_engine.py — seleção inteligente de testes via grafo de imports AST.
+ast_ci_engine.py — seleção inteligente de testes via AST.
 
-Pipeline: change detection → dependency graph → impact BFS → test selection.
+Level 2: import graph (file → file)
+Level 3: call graph (function → function) — default
 """
 
 from __future__ import annotations
@@ -14,6 +15,15 @@ from collections import defaultdict, deque
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable
+
+from ast_ci_call_graph import (
+    CallGraphState,
+    CallImpactReport,
+    build_call_graph,
+    log_call_graph,
+    log_call_impact,
+    propagate_call_impact,
+)
 
 # -----------------------------------------------------------------------------
 # CONFIGURAÇÃO
@@ -47,30 +57,11 @@ IRRELEVANT_TXT_FILES = frozenset(
 # Extensões não-Python ignoradas na detecção de mudanças (não inclui .txt).
 IGNORE_CHANGE_SUFFIXES = frozenset({".md", ".log", ".csv", ".png", ".jpg", ".jpeg"})
 
-# Fallback final opcional — só quando há mudança Python mas grafo não alcança testes.
-FILE_TO_TESTS: dict[str, list[str]] = {
-    "pipeline": [
-        "tests/test_pipeline_regression.py",
-        "tests/test_ci_stress_reliability.py",
-    ],
-    "model": [
-        "tests/test_pipeline_regression.py",
-    ],
-    "contract": [
-        "tests/test_contract_enforcement.py",
-    ],
-    "ci": [
-        "tests/test_ci_stress_reliability.py",
-    ],
-}
+# Fallback secundário removido (Level 3): FILE_TO_TESTS não é mais usado na seleção.
+# Fallback permitido apenas: function_count == 0 ou nenhum teste mapeado → FULL CI.
 
-CORE_TESTS = [
-    "tests/test_pipeline_regression.py",
-    "tests/test_ci_stress_reliability.py",
-    "tests/test_contract_enforcement.py",
-]
-
-MAX_SELECTED_TESTS = 200
+FULL_CI_TARGET = "tests"
+AST_CI_LEVEL = os.environ.get("AST_CI_LEVEL", "3")
 
 
 @dataclass
@@ -93,6 +84,8 @@ class SelectionReport:
     tests: list[str] = field(default_factory=list)
     affected_files: list[str] = field(default_factory=list)
     fallback_reason: str | None = None
+    engine_level: str = "L2"
+    call_impact: CallImpactReport | None = None
 
 
 # -----------------------------------------------------------------------------
@@ -138,11 +131,14 @@ def log_graph(report: GraphReport) -> None:
 
 
 def log_selection(selection: SelectionReport) -> None:
+    if selection.call_impact:
+        log_call_impact(selection.call_impact)
     _log_section("PRINT SELECTED TESTS")
+    print(f"Engine level: {selection.engine_level}")
     print(f"Count: {len(selection.tests)}")
     for test in selection.tests:
         print(f"  test: {test}")
-    print(f"Affected files (impact): {len(selection.affected_files)}")
+    print(f"Affected files (L2 impact): {len(selection.affected_files)}")
     if selection.fallback_reason:
         _log_section("PRINT FALLBACK REASON")
         print(selection.fallback_reason)
@@ -153,9 +149,21 @@ def log_selection(selection: SelectionReport) -> None:
 # -----------------------------------------------------------------------------
 
 
+def _relative_project_path(path: str | Path, base: Path | None = None) -> str:
+    """Normaliza caminho para relativo ao PROJECT_ROOT."""
+    root = (base or PROJECT_ROOT).resolve()
+    target = Path(path)
+    if not target.is_absolute():
+        target = (root / target).resolve()
+    try:
+        return _norm(target.relative_to(root))
+    except ValueError:
+        return _norm(target)
+
+
 def get_python_files(root: Path | None = None) -> list[str]:
-    """Lista arquivos Python do projeto (scan amplo, sem excluir src/tests/scripts)."""
-    base = root or PROJECT_ROOT
+    """Lista arquivos Python do projeto (paths relativos ao root)."""
+    base = (root or PROJECT_ROOT).resolve()
     files: list[str] = []
 
     for current_root, dirs, filenames in os.walk(base):
@@ -163,10 +171,11 @@ def get_python_files(root: Path | None = None) -> list[str]:
         for filename in filenames:
             if not filename.endswith(".py"):
                 continue
-            path = _norm(Path(current_root) / filename)
-            if any(f"/{part}/" in f"/{path}/" for part in IGNORE_WALK_DIRS):
+            abs_path = Path(current_root) / filename
+            rel_path = _relative_project_path(abs_path, base)
+            if any(f"/{part}/" in f"/{rel_path}/" for part in IGNORE_WALK_DIRS):
                 continue
-            files.append(path)
+            files.append(rel_path)
 
     return sorted(files)
 
@@ -217,7 +226,7 @@ def get_changed_files() -> ChangeReport:
             if not line or line in seen:
                 continue
             seen.add(line)
-            report.raw.append(_norm(line))
+            report.raw.append(_relative_project_path(line))
 
     report.raw.sort()
 
@@ -427,9 +436,17 @@ def get_affected_files(changed_files: Iterable[str], reverse_graph: dict[str, se
 
 
 def _is_test_file(path: str) -> bool:
-    normalized = _norm(path)
-    name = Path(normalized).name
-    return normalized.startswith("tests/") and name.startswith("test_") and name.endswith(".py")
+    normalized = _relative_project_path(path)
+    marker = "/tests/"
+    if marker in f"/{normalized}/":
+        rel = normalized.split("tests/", 1)[-1]
+        rel = f"tests/{rel}" if not normalized.startswith("tests/") else normalized
+    elif normalized.startswith("tests/"):
+        rel = normalized
+    else:
+        return False
+    name = Path(rel).name
+    return name.startswith("test_") and name.endswith(".py")
 
 
 def _select_tests_from_graph(affected_files: Iterable[str]) -> list[str]:
@@ -437,21 +454,55 @@ def _select_tests_from_graph(affected_files: Iterable[str]) -> list[str]:
     return tests
 
 
-def _select_tests_from_fallback(changed_python: Iterable[str]) -> list[str]:
-    selected: set[str] = set()
-    for path in changed_python:
-        blob = _norm(path).lower()
-        for key, related in FILE_TO_TESTS.items():
-            if key in blob:
-                selected.update(related)
-    return sorted(selected)
+def _select_tests_level3(
+    change_report: ChangeReport,
+    call_state: CallGraphState,
+) -> SelectionReport | None:
+    """Level 3 — impacto por call graph."""
+    if call_state.function_count == 0:
+        return None
+
+    impact = propagate_call_impact(change_report.python_changes, call_state)
+    if impact.affected_tests:
+        selection = SelectionReport(
+            tests=impact.affected_tests,
+            engine_level="L3",
+            call_impact=impact,
+        )
+        return selection
+
+    return SelectionReport(
+        tests=[],
+        engine_level="L3",
+        call_impact=impact,
+    )
+
+
+def _select_tests_level2(
+    change_report: ChangeReport,
+    reverse_graph: dict[str, set[str]],
+) -> SelectionReport:
+    """Level 2 — impacto por import graph (compatibilidade)."""
+    selection = SelectionReport(engine_level="L2")
+    selection.affected_files = sorted(
+        get_affected_files(change_report.python_changes, reverse_graph)
+    )
+    graph_tests = _select_tests_from_graph(selection.affected_files)
+    if graph_tests:
+        selection.tests = graph_tests
+    return selection
 
 
 def select_tests(
     change_report: ChangeReport,
     reverse_graph: dict[str, set[str]],
+    call_state: CallGraphState | None = None,
 ) -> SelectionReport:
-    """Seleciona testes via grafo; fallback só com mudança Python sem testes alcançados."""
+    """
+    Seleciona testes: L3 (call graph) → L2 (import graph) → FULL CI explícito.
+
+    Fallback FULL CI apenas se function_count == 0 ou nenhum teste mapeado após L3+L2.
+    """
     selection = SelectionReport()
 
     if not change_report.python_changes:
@@ -459,23 +510,28 @@ def select_tests(
         selection.tests = []
         return selection
 
-    selection.affected_files = sorted(
-        get_affected_files(change_report.python_changes, reverse_graph)
-    )
-    graph_tests = _select_tests_from_graph(selection.affected_files)
+    if AST_CI_LEVEL != "2" and call_state is not None:
+        l3 = _select_tests_level3(change_report, call_state)
+        if l3 and l3.tests:
+            return l3
 
-    if graph_tests:
-        selection.tests = graph_tests
+    if call_state is not None and call_state.function_count == 0:
+        selection.tests = [FULL_CI_TARGET]
+        selection.fallback_reason = "full_ci_explicit_no_function_nodes"
+        selection.engine_level = "FULL"
         return selection
 
-    fallback_tests = _select_tests_from_fallback(change_report.python_changes)
-    if fallback_tests:
-        selection.tests = fallback_tests
-        selection.fallback_reason = "graph_miss_using_file_to_tests"
-        return selection
+    l2 = _select_tests_level2(change_report, reverse_graph)
+    if l2.tests:
+        if call_state is not None:
+            l2.call_impact = propagate_call_impact(change_report.python_changes, call_state)
+        return l2
 
-    selection.tests = CORE_TESTS.copy()
-    selection.fallback_reason = "graph_miss_using_core_tests"
+    selection.tests = [FULL_CI_TARGET]
+    selection.fallback_reason = "full_ci_explicit_no_mapped_tests"
+    selection.engine_level = "FULL"
+    if call_state is not None:
+        selection.call_impact = propagate_call_impact(change_report.python_changes, call_state)
     return selection
 
 
@@ -495,15 +551,8 @@ def run_tests(tests: list[str], *, fallback_reason: str | None = None) -> int:
         print("No Python changes detected — skipping pytest.")
         return 0
 
-    if len(tests) > MAX_SELECTED_TESTS:
-        print(
-            f"WARN: {len(tests)} tests selected (> {MAX_SELECTED_TESTS}); "
-            "truncating to limit (not full CI)."
-        )
-        tests = tests[:MAX_SELECTED_TESTS]
-
     cmd = [sys.executable, "-m", "pytest", "-q", "-x", *tests]
-    print("Tests selected:", len(tests))
+    print("Tests selected:", len(tests) if tests != [FULL_CI_TARGET] else "FULL CI")
     print("CMD:", " ".join(cmd))
 
     return subprocess.run(cmd, cwd=PROJECT_ROOT).returncode
@@ -515,7 +564,7 @@ def run_tests(tests: list[str], *, fallback_reason: str | None = None) -> int:
 
 
 def main() -> int:
-    print("AST CI STARTED")
+    print(f"AST CI STARTED (level={AST_CI_LEVEL})")
 
     files = get_python_files()
     print(f"Python files found: {len(files)}")
@@ -523,10 +572,13 @@ def main() -> int:
     _graph, reverse_graph, graph_report = build_graph(files)
     log_graph(graph_report)
 
+    call_state = build_call_graph(files)
+    log_call_graph(call_state)
+
     change_report = get_changed_files()
     log_change_input(change_report)
 
-    selection = select_tests(change_report, reverse_graph)
+    selection = select_tests(change_report, reverse_graph, call_state)
     log_selection(selection)
 
     return run_tests(selection.tests, fallback_reason=selection.fallback_reason)
