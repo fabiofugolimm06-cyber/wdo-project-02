@@ -1,0 +1,88 @@
+{
+  "backtest_metrics": {
+    "avg_holding_period": 0.0,
+    "avg_trade_return": 0.0,
+    "completed_trades": 0.0,
+    "cost_per_trade": 0.0001,
+    "exit_max_hold": 0.0,
+    "exit_signal_flip": 0.0,
+    "exit_stop_loss": 0.0,
+    "exit_take_profit": 0.0,
+    "max_drawdown": 0.0,
+    "max_hold_bars": 5.0,
+    "num_trade_events": 0.0,
+    "num_trades": 0.0,
+    "sharpe": 0.0,
+    "slippage": 5e-05,
+    "stop_loss": 0.01,
+    "stop_loss_hits": 0.0,
+    "take_profit": 0.02,
+    "take_profit_hits": 0.0,
+    "total_cost_paid": 0.0,
+    "total_return": 0.0,
+    "win_rate": 0.0
+  },
+  "contract_id": "full_pipeline_contract_v1",
+  "contract_version": "1.0.0",
+  "execution_metrics": {
+    "flat_periods": 89,
+    "long_entries": 0,
+    "num_orders": 0,
+    "short_entries": 0
+  },
+  "model_metrics": {
+    "accuracy": 0.483146067416,
+    "f1": 0.46511627907,
+    "precision": 0.408163265306,
+    "recall": 0.540540540541
+  },
+  "schema": {
+    "backtest_metrics_keys": [
+      "avg_holding_period",
+      "avg_trade_return",
+      "completed_trades",
+      "cost_per_trade",
+      "exit_max_hold",
+      "exit_signal_flip",
+      "exit_stop_loss",
+      "exit_take_profit",
+      "max_drawdown",
+      "max_hold_bars",
+      "num_trade_events",
+      "num_trades",
+      "sharpe",
+      "slippage",
+      "stop_loss",
+      "stop_loss_hits",
+      "take_profit",
+      "take_profit_hits",
+      "total_cost_paid",
+      "total_return",
+      "win_rate"
+    ],
+    "execution_metrics_keys": [
+      "flat_periods",
+      "long_entries",
+      "num_orders",
+      "short_entries"
+    ],
+    "model_metrics_keys": [
+      "accuracy",
+      "f1",
+      "precision",
+      "recall"
+    ],
+    "top_keys": [
+      "backtest_metrics",
+      "execution_metrics",
+      "features_shape",
+      "model_metrics"
+    ]
+  },
+  "structure": {
+    "features_shape": [
+      295,
+      4
+    ]
+  }
+}

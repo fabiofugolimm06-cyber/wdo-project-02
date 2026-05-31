@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from microstructure.contracts import ML_METRIC_KEYS
 from microstructure.pipeline import run_full_pipeline
 
 
@@ -28,7 +29,7 @@ def _ohlcv(n: int = 300, seed: int = 42) -> pd.DataFrame:
     )
 
 
-_MODEL_KEYS = {"accuracy", "precision", "recall", "f1"}
+_MODEL_KEYS = ML_METRIC_KEYS
 _EXEC_KEYS = {"num_orders", "long_entries", "short_entries", "flat_periods"}
 _BT_KEYS = {
     "total_return",

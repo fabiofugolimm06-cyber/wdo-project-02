@@ -10,22 +10,22 @@ concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-jobs:
-  test:
-    name: pytest (ubuntu)
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
+env:
+  PYTHONPATH: .
+  PYTHONHASHSEED: "42"
+  OMP_NUM_THREADS: "1"
+  MKL_NUM_THREADS: "1"
+  OPENBLAS_NUM_THREADS: "1"
+  NUMEXPR_NUM_THREADS: "1"
+  VECLIB_MAXIMUM_THREADS: "1"
+  BLIS_NUM_THREADS: "1"
+  WDO_CI: "1"
 
-    env:
-      PYTHONPATH: .
-      PYTHONHASHSEED: "42"
-      OMP_NUM_THREADS: "1"
-      MKL_NUM_THREADS: "1"
-      OPENBLAS_NUM_THREADS: "1"
-      NUMEXPR_NUM_THREADS: "1"
-      VECLIB_MAXIMUM_THREADS: "1"
-      BLIS_NUM_THREADS: "1"
-      WDO_CI: "1"
+jobs:
+  architecture-gate:
+    name: architecture-gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
 
     steps:
       - uses: actions/checkout@v4
@@ -42,13 +42,29 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run full test suite
-        run: python -m pytest tests/ -v --tb=short
+      - name: Run final architecture pipeline (17 gates consolidated)
+        run: python scripts/run_architecture_gate.py
 
-      - name: Determinism stress (20 pipeline runs)
+  test-fast:
+    name: pytest fast
+    needs: architecture-gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install dependencies
         run: |
-          python -m pytest \
-            tests/test_ci_determinism_stress.py \
-            tests/test_model_v1.py::TestModelPipelineIntegration::test_full_pipeline \
-            tests/test_project_determinism.py \
-            -v --tb=short
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run fast test suite
+        run: python -m pytest -m "not slow and not long" -x --tb=short

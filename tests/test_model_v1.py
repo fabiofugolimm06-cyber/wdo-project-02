@@ -20,6 +20,7 @@ from microstructure.model import (
     train_test_split_time_series,
 )
 from microstructure.model.pipeline import pipeline_fingerprint, run_ml_pipeline_v1
+from tests.model_v1_pipeline import run_model_v1_integration_pipeline
 from tests.ohlcv_data import make_ohlcv
 
 
@@ -134,29 +135,14 @@ class TestDeterminism:
 
 class TestModelPipelineIntegration:
     def test_full_pipeline(self, capsys):
-        set_global_determinism(WDO_PROJECT_RANDOM_SEED)
-        df = _ohlcv(200)
-        X = build_dataset(df)
-        y = create_horizon_labels(df, price_col="fechamento", horizon=5)
-        X_ml, y_ml = drop_invalid_label_rows(X, y)
-        X_ml, y_ml = drop_nan_feature_rows(X_ml, y_ml)
+        out = run_model_v1_integration_pipeline(n_rows=200)
 
-        X_train, X_test, y_train, y_test = train_test_split_time_series(
-            X_ml, y_ml, train_size=0.70
+        assert out["n_ml"] == 195
+        print(
+            f"X_ml: ({out['n_ml']},), "
+            f"train: ({out['n_train']},), test: ({out['n_test']},)"
         )
-        model = train_logistic_model(X_train, y_train)
-        proba = predict_probabilities(model, X_test)
-        signals = generate_ml_signal(proba, threshold=0.55)
-        metrics = evaluate_classifier(model, X_test, y_test)
-
-        assert X_ml.shape[0] == len(df) - 5
-        assert X_ml.shape[0] == 195
-        assert len(X_train) + len(X_test) == len(X_ml)
-        assert proba.shape[0] == len(X_test)
-        assert len(signals) == len(X_test)
-
-        print(f"X_ml: {X_ml.shape}, train: {X_train.shape}, test: {X_test.shape}")
-        print(f"metrics: {metrics}")
+        print(f"metrics: {out['metrics']}")
         print("MODEL V1 PIPELINE OK")
 
         captured = capsys.readouterr()

@@ -8,6 +8,7 @@ from typing import Any
 
 import pandas as pd
 
+from microstructure.contracts.enforcement import validate_full_pipeline_contract
 from microstructure.determinism import set_global_determinism
 from microstructure.backtest.engine_v3 import run_backtest_v3
 from microstructure.execution import simulate_execution
@@ -49,8 +50,10 @@ def run_full_pipeline(
 
     Returns
     -------
-    dict com ``features_shape``, ``model_metrics``, ``execution_metrics``,
-    ``backtest_metrics``.
+    dict com ``features_shape``, ``model_metrics`` (ML only),
+    ``execution_metrics``, ``backtest_metrics`` (inclui ``sharpe``).
+
+    Contratos: ``microstructure/contracts/pipeline_schemas.py``.
     """
     if df is None or len(df) == 0:
         raise ValueError("run_full_pipeline: DataFrame vazio.")
@@ -90,9 +93,11 @@ def run_full_pipeline(
     bt_out = run_backtest_v3(df_test, ml_signals, price_col=price_col)
     backtest_metrics = bt_out["metrics"]
 
-    return {
+    result = {
         "features_shape": features_shape,
         "model_metrics": model_metrics,
         "execution_metrics": execution_metrics,
         "backtest_metrics": backtest_metrics,
     }
+    validate_full_pipeline_contract(result)
+    return result

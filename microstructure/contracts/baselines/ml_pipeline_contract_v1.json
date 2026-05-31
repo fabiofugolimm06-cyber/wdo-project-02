@@ -1,0 +1,51 @@
+{
+  "allow_extra_top_keys": false,
+  "contract_id": "ml_pipeline_contract_v1",
+  "forbidden_top_keys": [
+    "backtest_metrics",
+    "execution_metrics",
+    "features_shape",
+    "model_metrics"
+  ],
+  "nested_schemas": [
+    {
+      "allow_extra_keys": false,
+      "block_name": "metrics",
+      "forbidden_keys": [
+        "completed_trades",
+        "max_drawdown",
+        "num_trades",
+        "pnl",
+        "profit_factor",
+        "sharpe",
+        "sharpe_ratio",
+        "total_pnl",
+        "total_return",
+        "win_rate"
+      ],
+      "required_keys": [
+        "accuracy",
+        "f1",
+        "precision",
+        "recall"
+      ]
+    }
+  ],
+  "output_schema": {
+    "metrics": "dict — classificação sklearn (4 chaves fixas)",
+    "n_ml": "int — linhas após limpeza de labels/features",
+    "n_test": "int — linhas de teste",
+    "n_train": "int — linhas de treino (split temporal)",
+    "proba": "ndarray[float] — probabilidades no hold-out",
+    "signals": "ndarray[int] — sinais discretos no hold-out"
+  },
+  "required_top_keys": [
+    "metrics",
+    "n_ml",
+    "n_test",
+    "n_train",
+    "proba",
+    "signals"
+  ],
+  "version": "1.0.0"
+}

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# CI local — espelha .github/workflows/ci.yml
+# CI local — espelha .github/workflows/ci.yml (fast tier)
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -12,11 +12,11 @@ export WDO_CI=1
 python -m pip install --upgrade pip
 pip install -r requirements.txt
 
-python -m pytest tests/ -v --tb=short
+python scripts/run_architecture_gate.py
 
-python -m pytest \
-  tests/test_ci_determinism_stress.py \
-  tests/test_model_v1.py::TestModelPipelineIntegration::test_full_pipeline \
-  tests/test_project_determinism.py \
-  -v --tb=short
-echo "CI LOCAL OK"
+python -m pytest -m "not slow and not long" -x --tb=short
+echo "CI FAST OK"
+
+# Tiers opcionais (manual):
+# python -m pytest -m "slow" -x --tb=short
+# python -m pytest -m "long" -x --tb=short

@@ -1,0 +1,65 @@
+{
+  "allow_extra_top_keys": false,
+  "contract_id": "full_pipeline_contract_v1",
+  "forbidden_top_keys": [],
+  "nested_schemas": [
+    {
+      "allow_extra_keys": false,
+      "block_name": "model_metrics",
+      "forbidden_keys": [
+        "completed_trades",
+        "max_drawdown",
+        "num_trades",
+        "pnl",
+        "profit_factor",
+        "sharpe",
+        "sharpe_ratio",
+        "total_pnl",
+        "total_return",
+        "win_rate"
+      ],
+      "required_keys": [
+        "accuracy",
+        "f1",
+        "precision",
+        "recall"
+      ]
+    },
+    {
+      "allow_extra_keys": true,
+      "block_name": "execution_metrics",
+      "forbidden_keys": [],
+      "required_keys": [
+        "flat_periods",
+        "long_entries",
+        "num_orders",
+        "short_entries"
+      ]
+    },
+    {
+      "allow_extra_keys": true,
+      "block_name": "backtest_metrics",
+      "forbidden_keys": [],
+      "required_keys": [
+        "completed_trades",
+        "max_drawdown",
+        "sharpe",
+        "total_return",
+        "win_rate"
+      ]
+    }
+  ],
+  "output_schema": {
+    "backtest_metrics": "dict — métricas de backtest (inclui sharpe)",
+    "execution_metrics": "dict — métricas de simulação de execução",
+    "features_shape": "tuple — shape (n_rows, n_features) pós-limpeza",
+    "model_metrics": "dict — mesmo contrato ML (4 métricas)"
+  },
+  "required_top_keys": [
+    "backtest_metrics",
+    "execution_metrics",
+    "features_shape",
+    "model_metrics"
+  ],
+  "version": "1.0.0"
+}

@@ -16,6 +16,7 @@ from microstructure.model.predict import generate_ml_signal, predict_probabiliti
 from microstructure.model.split import train_test_split_time_series
 from microstructure.model.trainer import train_logistic_model
 from microstructure.model.utils import drop_nan_feature_rows
+from microstructure.contracts.enforcement import validate_ml_contract
 from microstructure.model.metrics import evaluate_classifier
 
 
@@ -29,6 +30,9 @@ def run_ml_pipeline_v1(
 ) -> dict[str, Any]:
     """
     Pipeline ML completo, isolado e reprodutível.
+
+    Contrato ``metrics``: apenas ``accuracy``, ``precision``, ``recall``, ``f1``
+    (ver ``microstructure/contracts/pipeline_schemas.py``).
 
     - Reinicia seeds globais a cada chamada
     - Não muta ``df`` (cópia profunda)
@@ -50,7 +54,7 @@ def run_ml_pipeline_v1(
     signals = generate_ml_signal(proba, threshold=ml_threshold)
     metrics = evaluate_classifier(model, X_test, y_test)
 
-    return {
+    result = {
         "n_ml": len(X_ml),
         "n_train": len(X_train),
         "n_test": len(X_test),
@@ -58,6 +62,8 @@ def run_ml_pipeline_v1(
         "signals": np.asarray(signals, dtype=int).copy(),
         "proba": np.asarray(proba, dtype=float).copy(),
     }
+    validate_ml_contract(result)
+    return result
 
 
 def pipeline_fingerprint(result: dict[str, Any]) -> tuple[Any, ...]:
