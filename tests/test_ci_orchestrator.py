@@ -34,3 +34,19 @@ def test_export_dashboard_metrics():
     metrics = export_ci_dashboard_metrics()
     assert "total_executions" in metrics
     assert "failure_rate" in metrics
+
+
+def test_call_graph_cache_reuse():
+    from ci_cache import build_call_graph_cached, load_cached_call_graph
+
+    files = ["ci_orchestrator.py", "ci_learning_engine.py", "ci_cache.py", "tests/test_ci_orchestrator.py"]
+    state1, report1 = build_call_graph_cached(files)
+    assert state1.function_count > 0
+    assert not report1.reused
+
+    state2, report2 = build_call_graph_cached(files)
+    assert report2.reused
+    assert state2.function_count == state1.function_count
+
+    loaded, _ = load_cached_call_graph()
+    assert loaded is not None

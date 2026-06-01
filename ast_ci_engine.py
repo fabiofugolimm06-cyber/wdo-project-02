@@ -24,6 +24,7 @@ from ast_ci_call_graph import (
     log_call_impact,
     propagate_call_impact,
 )
+from ci_cache import build_call_graph_cached
 
 # -----------------------------------------------------------------------------
 # CONFIGURAÇÃO
@@ -418,19 +419,16 @@ def get_affected_files(changed_files: Iterable[str], reverse_graph: dict[str, se
     """BFS no grafo reverso — quem importa os arquivos alterados."""
     normalized_changes = {_norm(f) for f in changed_files}
     affected: set[str] = set()
-    queue: deque[str] = deque()
-
-    for path in normalized_changes:
-        if path in reverse_graph or path.endswith(".py"):
-            queue.append(path)
+    queue: deque[str] = deque(sorted(normalized_changes))
 
     while queue:
         current = queue.popleft()
         if current in affected:
             continue
         affected.add(current)
-        for dependent in reverse_graph.get(current, ()):
-            queue.append(dependent)
+        for dependent in sorted(reverse_graph.get(current, ())):
+            if dependent not in affected:
+                queue.append(dependent)
 
     return affected
 
@@ -516,6 +514,10 @@ def select_tests(
             return l3
 
     if call_state is not None and call_state.function_count == 0:
+        l2 = _select_tests_level2(change_report, reverse_graph)
+        if l2.tests:
+            l2.fallback_reason = "failsafe_l2_no_function_nodes"
+            return l2
         selection.tests = [FULL_CI_TARGET]
         selection.fallback_reason = "full_ci_explicit_no_function_nodes"
         selection.engine_level = "FULL"
@@ -572,11 +574,26 @@ def main() -> int:
     _graph, reverse_graph, graph_report = build_graph(files)
     log_graph(graph_report)
 
-    call_state = build_call_graph(files)
-    log_call_graph(call_state)
-
     change_report = get_changed_files()
     log_change_input(change_report)
+
+    try:
+        call_state, cache_report = build_call_graph_cached(
+            files,
+            changed_files=change_report.python_changes,
+        )
+        if cache_report.reused:
+            print("\n=== CALL GRAPH CACHE ===")
+            print("REUSED — no Python structural changes detected")
+        elif cache_report.incremental:
+            print("\n=== CALL GRAPH CACHE ===")
+            print(f"INCREMENTAL — updated {len(cache_report.changed_files)} files")
+    except Exception as exc:
+        print(f"WARN ast_ci_engine: call graph cache failed ({exc}) — L2 stable fallback")
+        call_state = None
+
+    if call_state is not None:
+        log_call_graph(call_state)
 
     selection = select_tests(change_report, reverse_graph, call_state)
     log_selection(selection)

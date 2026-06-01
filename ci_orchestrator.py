@@ -20,12 +20,12 @@ from ast_ci_engine import (
     AST_CI_LEVEL,
     FULL_CI_TARGET,
     PROJECT_ROOT,
-    build_call_graph,
     build_graph,
     get_changed_files,
     get_python_files,
     select_tests,
 )
+from ci_cache import CacheBuildReport, PerfMetrics, build_call_graph_cached, save_perf_metrics
 from ci_learning_engine import CILearningEngine
 
 METRICS_STORE = PROJECT_ROOT / "ci_metrics_store.json"
@@ -101,6 +101,10 @@ class OrchestratorResult:
     execution_time_ms: int = 0
     learning: dict[str, Any] = field(default_factory=dict)
     exit_code: int = 0
+    cache_reused: bool = False
+    incremental_update: bool = False
+    perf: dict[str, Any] = field(default_factory=dict)
+    failsafe_l2: bool = False
 
 
 def compute_change_risk(changed_files: list[str]) -> RiskReport:
@@ -258,22 +262,35 @@ def export_ci_dashboard_metrics() -> dict[str, Any]:
     return dashboard
 
 
-def _run_pytest(tests: list[str]) -> tuple[int, list[str], list[str]]:
+def _run_pytest(tests: list[str]) -> tuple[int, list[str], list[str], bool]:
+    """Run pytest; parallel (-n auto) when > 3 tests."""
     if not tests:
-        return 0, [], []
-    cmd = [sys.executable, "-m", "pytest", "-q", "-x", *tests]
-    proc = subprocess.run(cmd, cwd=PROJECT_ROOT, capture_output=True, text=True)
+        return 0, [], [], False
+    parallel = len(tests) > 3 and tests != [FULL_CI_TARGET]
+    base_cmd = [sys.executable, "-m", "pytest", "-q", "-x"]
+    if parallel:
+        cmd = [*base_cmd, "-n", "auto", *tests]
+        proc = subprocess.run(cmd, cwd=PROJECT_ROOT, capture_output=True, text=True)
+        if proc.returncode != 0 and "no such option: -n" in (proc.stderr + proc.stdout).lower():
+            cmd = [*base_cmd, *tests]
+            proc = subprocess.run(cmd, cwd=PROJECT_ROOT, capture_output=True, text=True)
+            parallel = False
+    else:
+        cmd = [*base_cmd, *tests]
+        proc = subprocess.run(cmd, cwd=PROJECT_ROOT, capture_output=True, text=True)
+
     passed: list[str] = []
     failed: list[str] = []
     if proc.returncode == 0:
         passed = list(tests)
     else:
         failed = list(tests)
-    return proc.returncode, passed, failed
+    return proc.returncode, passed, failed, parallel
 
 
 def run_orchestrator() -> OrchestratorResult:
     started = time.perf_counter()
+    perf = PerfMetrics()
     result = OrchestratorResult(ci_level=AST_CI_LEVEL)
     committed = False
     metrics = _load_json(METRICS_STORE, {"executions": [], "batch_state": {"pending_runs": 0}})
@@ -291,21 +308,12 @@ def run_orchestrator() -> OrchestratorResult:
     print(f"  reason: {result.risk.reason}")
 
     files = get_python_files()
+    graph_started = time.perf_counter()
     _graph, reverse_graph, graph_report = build_graph(files)
-    call_state = build_call_graph(files)
     result.graph_nodes = graph_report.node_count
     result.graph_edges = graph_report.edge_count
-    result.call_functions = call_state.function_count
-    result.call_edges = call_state.call_edge_count
 
-    _log("CI LEVEL USED", result.ci_level)
-    _log("GRAPH SIZE", f"import nodes={result.graph_nodes} edges={result.graph_edges}")
-    _log("CALL GRAPH SIZE", f"functions={result.call_functions} edges={result.call_edges}")
-
-    selection = select_tests(change_report, reverse_graph, call_state)
-    selected_tests = list(selection.tests)
-
-    history_rows = []
+    history_rows: list[dict[str, Any]] = []
     if HISTORY_LOG.exists():
         for line in HISTORY_LOG.read_text(encoding="utf-8").splitlines():
             if line.strip():
@@ -313,6 +321,47 @@ def run_orchestrator() -> OrchestratorResult:
                     history_rows.append(json.loads(line))
                 except json.JSONDecodeError:
                     pass
+
+    cache_report = CacheBuildReport()
+    call_state = None
+    graph_build_started = time.perf_counter()
+    try:
+        call_state, cache_report = build_call_graph_cached(
+            files,
+            changed_files=change_report.python_changes,
+            history=history_rows,
+        )
+        result.cache_reused = cache_report.reused
+        result.incremental_update = cache_report.incremental
+    except Exception as exc:
+        result.failsafe_l2 = True
+        result.ci_level = "2"
+        os.environ["AST_CI_LEVEL"] = "2"
+        _log("FAILSAFE MODE", f"L3 cache/graph failed — L2 stable mode ({exc})")
+
+    perf.graph_build_time_ms = int((time.perf_counter() - graph_build_started) * 1000)
+    perf.ast_parse_time_ms = cache_report.graph_build_time_ms
+    perf.ast_cache_hits = cache_report.ast_cache_hits
+    perf.ast_cache_misses = cache_report.ast_cache_misses
+    perf.cache_reused = cache_report.reused
+    perf.incremental_update = cache_report.incremental
+
+    if call_state is not None:
+        result.call_functions = call_state.function_count
+        result.call_edges = call_state.call_edge_count
+
+    _log("CI LEVEL USED", result.ci_level)
+    _log("GRAPH SIZE", f"import nodes={result.graph_nodes} edges={result.graph_edges}")
+    if call_state is not None:
+        _log("CALL GRAPH SIZE", f"functions={result.call_functions} edges={result.call_edges}")
+    _log("CACHE STATUS", f"reused={result.cache_reused} incremental={result.incremental_update}")
+    _log("AST CACHE", f"hits={cache_report.ast_cache_hits} misses={cache_report.ast_cache_misses}")
+
+    selection_started = time.perf_counter()
+    selection = select_tests(change_report, reverse_graph, call_state)
+    selected_tests = list(selection.tests)
+    perf.test_selection_time_ms = int((time.perf_counter() - selection_started) * 1000)
+
     flaky = learning_engine.detect_flaky_tests(history_rows)
     if flaky:
         selected_tests = learning_engine.expand_selection_for_flaky(selected_tests, history_rows)
@@ -333,6 +382,9 @@ def run_orchestrator() -> OrchestratorResult:
         _log("COMMIT DECISION", result.commit_decision)
         _log("PUSH DECISION", result.push_decision)
         result.execution_time_ms = int((time.perf_counter() - started) * 1000)
+        perf.total_ci_runtime_ms = result.execution_time_ms
+        save_perf_metrics(perf)
+        result.perf = perf.to_dict()
         return result
 
     if selection.engine_level == "FULL":
@@ -342,9 +394,15 @@ def run_orchestrator() -> OrchestratorResult:
         result.push_decision = "NO"
         result.exit_code = 1
         result.execution_time_ms = int((time.perf_counter() - started) * 1000)
+        perf.total_ci_runtime_ms = result.execution_time_ms
+        save_perf_metrics(perf)
+        result.perf = perf.to_dict()
         return result
 
-    exit_code, passed_tests, failed_tests = _run_pytest(selected_tests)
+    test_started = time.perf_counter()
+    exit_code, passed_tests, failed_tests, parallel = _run_pytest(selected_tests)
+    perf.test_execution_time_ms = int((time.perf_counter() - test_started) * 1000)
+    _log("TEST EXECUTION MODE", "parallel (-n auto)" if parallel else "sequential")
     result.test_result = "PASS" if exit_code == 0 else "FAIL"
     _log("TEST RESULT", result.test_result)
 
@@ -367,6 +425,9 @@ def run_orchestrator() -> OrchestratorResult:
         _log("ROLLBACK STATUS", result.rollback_status)
         result.exit_code = exit_code or 1
         result.execution_time_ms = int((time.perf_counter() - started) * 1000)
+        perf.total_ci_runtime_ms = result.execution_time_ms
+        save_perf_metrics(perf)
+        result.perf = perf.to_dict()
         return result
 
     if result.risk.risk_level == "HIGH":
@@ -452,6 +513,13 @@ def run_orchestrator() -> OrchestratorResult:
         "commit_decision": result.commit_decision,
         "push_decision": result.push_decision,
         "previous_false_positive_rate": learning_engine.state.get("false_positive_rate", 0.0),
+        "cache_reused": result.cache_reused,
+        "incremental_update": result.incremental_update,
+        "failsafe_l2": result.failsafe_l2,
+        "affected_functions": sorted(
+            selection.call_impact.affected_functions if selection.call_impact else []
+        ),
+        "perf": perf.to_dict(),
     }
 
     _append_history(execution_event)
@@ -487,12 +555,16 @@ def run_orchestrator() -> OrchestratorResult:
     _log("DASHBOARD EXPORT", f"ci_dashboard_metrics.json ({dashboard['total_executions']} executions)")
 
     result.execution_time_ms = int((time.perf_counter() - started) * 1000)
+    perf.total_ci_runtime_ms = result.execution_time_ms
+    save_perf_metrics(perf)
+    result.perf = perf.to_dict()
+    _log("CI PERF METRICS", f"saved to ci_perf_metrics.json — total {perf.total_ci_runtime_ms}ms")
     result.exit_code = exit_code
     return result
 
 
 def main() -> int:
-    print("CI ORCHESTRATOR STARTED (Levels 1–4)")
+    print("CI ORCHESTRATOR STARTED (Levels 1–4 + Production Hardening)")
     outcome = run_orchestrator()
     _log("ORCHESTRATOR EXIT", outcome.exit_code)
     return outcome.exit_code

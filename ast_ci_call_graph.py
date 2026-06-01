@@ -353,7 +353,9 @@ def _parse_file(
         return [], []
 
     try:
-        tree = ast.parse(source, filename=file_path)
+        from ci_cache import get_cached_ast
+
+        tree = get_cached_ast(file_path, source)
     except SyntaxError as exc:
         print(f"WARN call_graph: syntax error in {file_path}: {exc}")
         return [], []
@@ -405,18 +407,18 @@ def build_call_graph(files: Iterable[str]) -> CallGraphState:
 
 def _forward_closure_from_tests(test_file: str, state: CallGraphState) -> set[str]:
     exercised: set[str] = set()
-    starters = [
+    starters = sorted(
         fk
         for fk in state.functions_by_file.get(_norm(test_file), [])
         if state.function_index[fk].name.startswith("test_")
-    ]
+    )
     queue: deque[str] = deque(starters)
     while queue:
         current = queue.popleft()
         if current in exercised:
             continue
         exercised.add(current)
-        for callee in state.call_graph.get(current, ()):
+        for callee in sorted(state.call_graph.get(current, ())):
             queue.append(callee)
     return exercised
 
@@ -427,20 +429,20 @@ def propagate_call_impact(
 ) -> CallImpactReport:
     report = CallImpactReport()
     seed_functions: set[str] = set()
-    for path in {_norm(f) for f in changed_python_files}:
+    for path in sorted({_norm(f) for f in changed_python_files}):
         seed_functions.update(state.functions_by_file.get(path, ()))
 
     if not seed_functions:
         return report
 
     affected = set(seed_functions)
-    queue: deque[tuple[str, int]] = deque((fn, 0) for fn in seed_functions)
+    queue: deque[tuple[str, int]] = deque(sorted((fn, 0) for fn in seed_functions))
     max_depth = 0
 
     while queue:
         fn_key, depth = queue.popleft()
         max_depth = max(max_depth, depth)
-        for caller in state.reverse_call_graph.get(fn_key, ()):
+        for caller in sorted(state.reverse_call_graph.get(fn_key, ())):
             if caller not in affected:
                 affected.add(caller)
                 queue.append((caller, depth + 1))
