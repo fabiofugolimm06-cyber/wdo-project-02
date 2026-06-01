@@ -1,4 +1,4 @@
-﻿import os
+import os
 import yaml
 import pandas as pd
 import numpy as np
@@ -9,7 +9,7 @@ from report_generator import generate_report
 
 # Configurações
 CONFIG = {
-    "data_path": os.path.join("C:\Users\fabio\Desktop\Projetos\WDO PROJECT 02", "data", "wdo_1min.csv"),
+    "data_path": os.path.join(r"C:\Users\fabio\Desktop\Projetos\WDO PROJECT 02", "data", "wdo_1min.csv"),
     "lookback_atr": 20,
     "slippage_pts": 0.5,
     "risk_per_trade": 0.01,
@@ -18,7 +18,7 @@ CONFIG = {
         {"train_start": "2024-01-01", "train_end": "2024-06-30",
          "test_start": "2024-07-01", "test_end": "2024-12-31"}
     ],
-    "output_dir": os.path.join("C:\Users\fabio\Desktop\Projetos\WDO PROJECT 02", "validation_reports")
+    "output_dir": os.path.join(r"C:\Users\fabio\Desktop\Projetos\WDO PROJECT 02", "validation_reports")
 }
 
 def load_data(path):
