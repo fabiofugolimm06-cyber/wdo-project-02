@@ -110,8 +110,12 @@ def load_ast_cache() -> dict[str, dict[str, Any]]:
             payload = pickle.load(handle)
         if isinstance(payload, dict):
             return payload
-    except (OSError, pickle.PickleError, EOFError):
+    except (OSError, pickle.PickleError, EOFError, UnicodeDecodeError, ValueError):
         print("WARN ci_cache: ast cache load failed — rebuilding")
+        try:
+            AST_CACHE_PATH.unlink(missing_ok=True)
+        except OSError:
+            pass
     return {}
 
 
@@ -164,8 +168,12 @@ def load_cached_call_graph() -> tuple[CallGraphState | None, dict[str, str]]:
         hashes = payload.get("file_hashes", {})
         if isinstance(state, CallGraphState) and isinstance(hashes, dict):
             return state, {str(k): str(v) for k, v in hashes.items()}
-    except (OSError, pickle.PickleError, EOFError):
+    except (OSError, pickle.PickleError, EOFError, UnicodeDecodeError, ValueError):
         print("WARN ci_cache: call graph cache load failed — rebuilding")
+        try:
+            CALL_GRAPH_CACHE_PATH.unlink(missing_ok=True)
+        except OSError:
+            pass
     return None, {}
 
 
