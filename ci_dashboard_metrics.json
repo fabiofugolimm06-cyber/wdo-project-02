@@ -1,0 +1,13 @@
+{
+  "generated_at": "2026-05-31T23:56:03.974529+00:00",
+  "total_executions": 1,
+  "ci_level_distribution": {
+    "3": 1
+  },
+  "risk_distribution": {
+    "HIGH": 1
+  },
+  "average_test_time_ms": 7586,
+  "failure_rate": 0.0,
+  "rollback_frequency": 0.0
+}

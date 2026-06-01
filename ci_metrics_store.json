@@ -1,0 +1,44 @@
+{
+  "executions": [
+    {
+      "timestamp": "2026-05-31T23:56:03.899572+00:00",
+      "changed_files": [
+        "BACKTEST",
+        "PROMPTS.txt",
+        "ci_dashboard_metrics.json",
+        "ci_learning_engine.py",
+        "ci_metrics_store.json",
+        "ci_optimization_state.json",
+        "ci_orchestrator.py",
+        "tests/test_ci_orchestrator.py"
+      ],
+      "python_changes": [
+        "ci_learning_engine.py",
+        "ci_orchestrator.py",
+        "tests/test_ci_orchestrator.py"
+      ],
+      "risk_score": 90,
+      "risk_level": "HIGH",
+      "ci_level": "3",
+      "engine_level": "L3",
+      "tests_run": [
+        "tests/test_ci_orchestrator.py"
+      ],
+      "tests_passed": [
+        "tests/test_ci_orchestrator.py"
+      ],
+      "tests_failed": [],
+      "execution_time_ms": 7586,
+      "commit_hash": "",
+      "rollback_triggered": false,
+      "test_result": "PASS",
+      "commit_decision": "NO",
+      "push_decision": "NO",
+      "previous_false_positive_rate": 0.0
+    }
+  ],
+  "batch_state": {
+    "pending_runs": 0,
+    "last_batch_at": ""
+  }
+}
